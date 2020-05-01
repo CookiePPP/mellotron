@@ -16,7 +16,7 @@ def _flatten_dense_tensors(tensors):
     """
     if len(tensors) == 1:
         return tensors[0].contiguous().view(-1)
-    flat = torch.cat([t.contiguous().view(-1).float() for t in tensors], dim=0)
+    flat = torch.cat([t.contiguous().view(-1) for t in tensors], dim=0)
     return flat
 
 def _unflatten_dense_tensors(flat, tensors):
@@ -140,7 +140,7 @@ def apply_gradient_allreduce(module):
                 buckets = {}
                 for param in module.parameters():
                     if param.requires_grad and param.grad is not None:
-                        tp = type(param.data)
+                        tp = param.data.dtype
                         if tp not in buckets:
                             buckets[tp] = []
                         buckets[tp].append(param)

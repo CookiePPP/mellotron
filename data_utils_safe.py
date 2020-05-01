@@ -1,23 +1,3 @@
-# TTTTTTTTTTTTTTTTTTTTTTTEEEEEEEEEEEEEEEEEEEEEE   SSSSSSSSSSSSSSS TTTTTTTTTTTTTTTTTTTTTTTIIIIIIIIIINNNNNNNN        NNNNNNNN        GGGGGGGGGGGGG
-# T:::::::::::::::::::::TE::::::::::::::::::::E SS:::::::::::::::ST:::::::::::::::::::::TI::::::::IN:::::::N       N::::::N     GGG::::::::::::G
-# T:::::::::::::::::::::TE::::::::::::::::::::ES:::::SSSSSS::::::ST:::::::::::::::::::::TI::::::::IN::::::::N      N::::::N   GG:::::::::::::::G
-# T:::::TT:::::::TT:::::TEE::::::EEEEEEEEE::::ES:::::S     SSSSSSST:::::TT:::::::TT:::::TII::::::IIN:::::::::N     N::::::N  G:::::GGGGGGGG::::G
-# TTTTTT  T:::::T  TTTTTT  E:::::E       EEEEEES:::::S            TTTTTT  T:::::T  TTTTTT  I::::I  N::::::::::N    N::::::N G:::::G       GGGGGG
-#         T:::::T          E:::::E             S:::::S                    T:::::T          I::::I  N:::::::::::N   N::::::NG:::::G              
-#         T:::::T          E::::::EEEEEEEEEE    S::::SSSS                 T:::::T          I::::I  N:::::::N::::N  N::::::NG:::::G              
-#         T:::::T          E:::::::::::::::E     SS::::::SSSSS            T:::::T          I::::I  N::::::N N::::N N::::::NG:::::G    GGGGGGGGGG
-#         T:::::T          E:::::::::::::::E       SSS::::::::SS          T:::::T          I::::I  N::::::N  N::::N:::::::NG:::::G    G::::::::G
-#         T:::::T          E::::::EEEEEEEEEE          SSSSSS::::S         T:::::T          I::::I  N::::::N   N:::::::::::NG:::::G    GGGGG::::G
-#         T:::::T          E:::::E                         S:::::S        T:::::T          I::::I  N::::::N    N::::::::::NG:::::G        G::::G
-#         T:::::T          E:::::E       EEEEEE            S:::::S        T:::::T          I::::I  N::::::N     N:::::::::N G:::::G       G::::G
-#       TT:::::::TT      EE::::::EEEEEEEE:::::ESSSSSSS     S:::::S      TT:::::::TT      II::::::IIN::::::N      N::::::::N  G:::::GGGGGGGG::::G
-#       T:::::::::T      E::::::::::::::::::::ES::::::SSSSSS:::::S      T:::::::::T      I::::::::IN::::::N       N:::::::N   GG:::::::::::::::G
-#       T:::::::::T      E::::::::::::::::::::ES:::::::::::::::SS       T:::::::::T      I::::::::IN::::::N        N::::::N     GGG::::::GGG:::G
-#       TTTTTTTTTTT      EEEEEEEEEEEEEEEEEEEEEE SSSSSSSSSSSSSSS         TTTTTTTTTTT      IIIIIIIIIINNNNNNNN         NNNNNNN        GGGGGG   GGGG
-#
-# Testing "Truncated minibatches with resets" to allow infinite length inputs and more efficient training.
-# https://arxiv.org/pdf/1811.07240.pdf
-
 import random
 import os
 import re
@@ -44,8 +24,6 @@ class TextMelLoader(torch.utils.data.Dataset):
         self.max_wav_value = hparams.max_wav_value
         self.sampling_rate = hparams.sampling_rate
         self.load_mel_from_disk = hparams.load_mel_from_disk
-        self.truncated_length = hparams.truncated_length
-        self.batch_size = hparams.batch_size
         self.speaker_ids = speaker_ids
         if speaker_ids is None:
             self.speaker_ids = self.create_speaker_lookup_table(self.audiopaths_and_text)
@@ -124,7 +102,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         print("Example Clip:")
         print(self.audiopaths_and_text[int(random.random()*len(self.audiopaths_and_text))][1])
         
-        # -------------- CHECK FILES --------------
+        # ---------- CHECK FILES --------------
         
         self.stft = layers.TacotronSTFT(
             hparams.filter_length, hparams.hop_length, hparams.win_length,
@@ -135,39 +113,6 @@ class TextMelLoader(torch.utils.data.Dataset):
         self.filter_length = hparams.filter_length
         self.hop_length = hparams.hop_length
 
-        # -------------- PREDICT LENGTH (TBPTT) --------------
-        
-        lengths = torch.tensor([self.get_mel(x[0]).shape[1] for x in self.audiopaths_and_text])
-        batch = []
-        self.len = 0
-        processed = 0
-        batch_lengths = lengths[:self.batch_size] # starting batch
-        while True:
-            batch_lengths = torch.cat((batch_lengths, lengths[processed+self.batch_size:processed+self.batch_size+(self.batch_size - batch_lengths.shape[0])]), 0)
-            print("batch_lengths =", batch_lengths, "self.len =", self.len, "processed =",processed)
-            if (batch_lengths.shape[0] < self.batch_size):
-                print("break"); break
-            batch_lengths = (batch_lengths-self.truncated_length)[batch_lengths-self.truncated_length>0] # theoretical length of the elements in the next batch that came from this batch.
-            processed+=self.batch_size-batch_lengths.shape[0]
-            self.len += 1
-        print("self.len =",self.len)
-        raise Exception("Testing.")
-        
-        # total_items = 234236
-        # batch_size = 6
-        # truncated_length = 100; iters <- 106644
-        # truncated_length= 1000; iters <- 39038
-        
-        # batch_size = 52
-        # truncated_length = 100; iters <- 12193
-        # truncated_length= 1000; iters <- 4503
-        
-        # batch_size = 500
-        # truncated_length = 100; iters <- 1264
-        
-        # batch_size = 1500
-        # truncated_length = 100; iters <- 419
-        
         random.seed(hparams.seed)
         random.shuffle(self.audiopaths_and_text)
 
@@ -214,7 +159,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         return self.get_mel_text_pair(self.audiopaths_and_text[index])
 
     def __len__(self):
-        return self.len
+        return len(self.audiopaths_and_text)
 
 
 class TextMelCollate():

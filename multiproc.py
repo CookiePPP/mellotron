@@ -21,3 +21,18 @@ for i in range(num_gpus):
 
 for p in workers:
     p.wait()
+
+
+#crashed = False
+#while (!crashed):
+#    for p in workers:
+#        poll = p.poll()
+#        if poll != None:
+#            crashed = True
+#    time.sleep(2)
+#for p in workers:
+#    try:
+#        p.terminate()
+#        p.kill()
+#    except Exception as e:
+#        pass

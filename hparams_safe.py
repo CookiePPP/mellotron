@@ -29,7 +29,7 @@ def create_hparams(hparams_string=None, verbose=False):
         load_mel_from_disk=True,
         training_files='/media/cookie/Samsung 860 QVO/ClipperDatasetV2/filelists/mel_train_taca2_merged.txt',
         validation_files='/media/cookie/Samsung 860 QVO/ClipperDatasetV2/filelists/mel_validation_taca2_merged.txt',
-        text_cleaners=['basic_cleaners'],
+        text_cleaners=['english_cleaners'],
         
         ################################
         # Audio Parameters             #
@@ -50,10 +50,14 @@ def create_hparams(hparams_string=None, verbose=False):
         symbols_embedding_dim=512,
         
         # Gate
+        gate_threshold=0.5,
+        mask_gate_loss=False, # False = Vanilla Nvidia Tacotron2
+        # masking the gate after the end of the clip will make the model never see the gate loss after the end of the clip. # TODO, explain this better # TODO, figure out why this is useful. # TODO, figure out why I added this
+        # false would punish the model for trying to end the clip before it's ready, but barely punish the model for just forgetting to end the clip.
+        # True will also help with badly trimmed audio.
         gate_positive_weight=10, # how much more valuable 1 positive frame is to 1 zero frame. 80 Frames per seconds, therefore values around 20 are fine.
         
         # Synthesis/Inference Related
-        gate_threshold=0.5,
         max_decoder_steps=3000,
         low_vram_inference=False, # doesn't save alignment and gate information, frees up some vram, especially for large input sequences.
         
@@ -73,7 +77,7 @@ def create_hparams(hparams_string=None, verbose=False):
         # (Decoder) Decoder parameters
         start_token = "",#"☺"
         stop_token = "",#"␤"
-        hide_startstop_tokens=False, # trim first/last encoder output before feeding to attention.
+        hide_startstop_tokens=False, # remove first/last encoder output, *should* remove start and stop tokens from the decocer assuming the tokens are used.
         n_frames_per_step=1,    # currently only 1 is supported
         context_frames=1,   # TODO TODO TODO TODO TODO
         
@@ -149,8 +153,8 @@ def create_hparams(hparams_string=None, verbose=False):
         torchMoji_training=False,# switch GST to torchMoji mode
         
         # (GST) Drop Style Tokens
-        p_drop_tokens=0.3, # Nudge the decoder to infer style without GST's input
-        drop_tokens_mode='speaker_embedding',#Options: ('zeros','halfs','embedding','speaker_embedding') # Replaces style_tokens with either a scaler or an embedding, or speaker embeddings
+        p_drop_tokens=0.4, # Nudge the decoder to infer style without GST's input
+        drop_tokens_mode='speaker_embedding',#Options: ('zeros','halfs','embedding','speaker_embedding') # Replaces style_tokens with either a scaler or an embedding, or a speaker_dependant embedding
         
         ################################
         # Optimization Hyperparameters #
@@ -159,14 +163,20 @@ def create_hparams(hparams_string=None, verbose=False):
         learning_rate=0.1e-5,
         weight_decay=1e-6,
         grad_clip_thresh=1.0,
-        batch_size=500,
-        val_batch_size=500, # for more precise comparisons between models, constant batch_size is useful
-        truncated_length=100, # steps between truncation.
-        mask_padding=True,
+        batch_size=56, # 32*3 = 0.377 val loss, # 2 = 0.71 val loss
+        val_batch_size=56, # for more precise comparisons between models, constant batch_size is useful
+        mask_padding=True,  # set model's padded outputs to padded values
         
-        # (DFR) Drop Frame Rate
+        # DFR (Drop Frame Rate)
         global_mean_npy='global_mean.npy',
         drop_frame_rate=0.25,
+        
+        ##################################
+        # MMI options                    #
+        ##################################
+        use_mmi=False,#depreciated
+        use_gaf=True,#depreciated
+        max_gaf=0.01,#depreciated
     )
 
     if hparams_string:

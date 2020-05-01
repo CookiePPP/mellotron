@@ -24,13 +24,13 @@ class ConvNorm(torch.nn.Module):
         if padding is None:
             assert(kernel_size % 2 == 1)
             padding = int(dilation * (kernel_size - 1) / 2)
+
         self.conv = torch.nn.Conv1d(in_channels, out_channels,
                                     kernel_size=kernel_size, stride=stride,
                                     padding=padding, dilation=dilation,
                                     bias=bias)
         torch.nn.init.xavier_uniform_(
             self.conv.weight, gain=torch.nn.init.calculate_gain(w_init_gain))
-
     def forward(self, signal):
         conv_signal = self.conv(signal)
         return conv_signal

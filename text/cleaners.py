@@ -29,7 +29,6 @@ _abbreviations = [(re.compile('\\b%s\\.' % x[0], re.IGNORECASE), x[1]) for x in 
   ('co', 'company'),
   ('jr', 'junior'),
   ('maj', 'major'),
-  ('gen', 'general'),
   ('drs', 'doctors'),
   ('rev', 'reverend'),
   ('lt', 'lieutenant'),
@@ -41,7 +40,6 @@ _abbreviations = [(re.compile('\\b%s\\.' % x[0], re.IGNORECASE), x[1]) for x in 
   ('col', 'colonel'),
   ('ft', 'fort'),
 ]]
-
 
 def expand_abbreviations(text):
   for regex, replacement in _abbreviations:
@@ -66,8 +64,8 @@ def convert_to_ascii(text):
 
 
 def basic_cleaners(text):
-  '''Basic pipeline that lowercases and collapses whitespace without transliteration.'''
-  text = lowercase(text)
+  '''Basic pipeline that expands numbers and collapses whitespace without transliteration.'''
+  text = expand_numbers(text)
   text = collapse_whitespace(text)
   return text
 
@@ -82,7 +80,6 @@ def transliteration_cleaners(text):
 
 def english_cleaners(text):
   '''Pipeline for English text, including number and abbreviation expansion.'''
-  text = convert_to_ascii(text)
   text = lowercase(text)
   text = expand_numbers(text)
   text = expand_abbreviations(text)
